@@ -68,15 +68,18 @@ def resize_with_padding(
 
     return resized_img
 
-
 def resize_with_cropping(
     source_frame_hwc: npt.NDArray[Any],
     display_wh: tuple[int, int],
+    align: str = "center",
 ) -> npt.NDArray[Any]:
     """
     source_frame: (..., H, W, C)
     Crops and resizes a source frame to fit the display resolution while preserving aspect ratio.
-    This logic is adapted directly from the user's robust BaseCamera implementation.
+
+    Args:
+        align: "left", "center", or "right" for horizontal crop alignment
+               (or "top", "center", "bottom" for vertical crop)
     """
     source_height, source_width = source_frame_hwc.shape[-3:-1]
     display_width, display_height = display_wh
@@ -86,13 +89,25 @@ def resize_with_cropping(
 
     if source_wh_ratio > display_wh_ratio:
         # source is "wider" than display, crop the width
+        assert align in ["left", "center", "right"], f"Invalid align: {align}"
         new_width = int(source_height * display_wh_ratio)
-        margin = (source_width - new_width) // 2
+        if align == "left":
+            margin = 0
+        elif align == "right":
+            margin = source_width - new_width
+        else:  # center
+            margin = (source_width - new_width) // 2
         cropped_frame = source_frame_hwc[..., :, margin : margin + new_width, :]
     else:
         # source is "taller" than or same as display, crop the height
+        assert align in ["top", "center", "bottom"], f"Invalid align: {align}"
         new_height = int(source_width / display_wh_ratio)
-        margin = (source_height - new_height) // 2
+        if align == "top":
+            margin = 0
+        elif align == "bottom":
+            margin = source_height - new_height
+        else:  # center
+            margin = (source_height - new_height) // 2
         cropped_frame = source_frame_hwc[..., margin : margin + new_height, :, :]
 
     if len(source_frame_hwc.shape) == 4:

@@ -284,3 +284,103 @@ def positive_w(
     if pose_xyz_wxyz[3] < 0.0:
         pose_xyz_wxyz[3:] = -pose_xyz_wxyz[3:]
     return pose_xyz_wxyz
+
+
+
+
+def rotvec_to_xyz_wxyz(xyz_rotvec: list[float] | npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    xyz_rotvec = np.asarray(xyz_rotvec)
+
+    xyz = xyz_rotvec[:3]
+    rotvec = xyz_rotvec[3:]
+
+    # Convert rotation vector to quaternion
+    rotation = Rotation.from_rotvec(rotvec)
+    quat_xyzw = rotation.as_quat()  # Returns [x, y, z, w]
+
+    # Reorder to [w, x, y, z]
+    quat_wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
+
+    # Concatenate position and quaternion
+    xyz_wxyz = np.concatenate([xyz, quat_wxyz])
+
+    return xyz_wxyz
+
+def rotm2rotvec(R: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """
+    Convert rotation matrix to rotation vector
+    """
+    theta = np.arccos((np.trace(R) - 1) / 2)
+    if np.isclose(theta, 0):
+        return np.zeros(3)
+    else:
+        k = np.array(
+            [
+                R[2, 1] - R[1, 2],
+                R[0, 2] - R[2, 0],
+                R[1, 0] - R[0, 1],
+            ]
+        )
+        k = k / (2 * np.sin(theta))
+        return theta * k
+
+
+def rotvec2rotm(rotvec: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """
+    Convert rotation vector to rotation matrix
+    """
+    theta = np.linalg.norm(rotvec)
+    if np.isclose(theta, 0):
+        return np.eye(3)
+    else:
+        k = rotvec / theta
+        K = np.array(
+            [
+                [0, -k[2], k[1]],
+                [k[2], 0, -k[0]],
+                [-k[1], k[0], 0],
+            ]
+        )
+        R = np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * K @ K
+        return R
+
+
+def rpy2rotm(rpy: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """
+    Convert roll-pitch-yaw angles to rotation matrix
+    """
+    roll, pitch, yaw = rpy
+    R_x = np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(roll), -np.sin(roll)],
+            [0, np.sin(roll), np.cos(roll)],
+        ]
+    )
+    R_y = np.array(
+        [
+            [np.cos(pitch), 0, np.sin(pitch)],
+            [0, 1, 0],
+            [-np.sin(pitch), 0, np.cos(pitch)],
+        ]
+    )
+    R_z = np.array(
+        [
+            [np.cos(yaw), -np.sin(yaw), 0],
+            [np.sin(yaw), np.cos(yaw), 0],
+            [0, 0, 1],
+        ]
+    )
+    R = np.dot(R_z, np.dot(R_y, R_x))
+    return R
+
+
+def rotm2rpy(R: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """
+    Convert rotation matrix to roll-pitch-yaw angles
+    """
+    roll = np.arctan2(R[2, 1], R[2, 2])
+    pitch = np.arctan2(-R[2, 0], np.sqrt(R[2, 1] ** 2 + R[2, 2] ** 2))
+    yaw = np.arctan2(R[1, 0], R[0, 0])
+
+    return np.array([roll, pitch, yaw])
