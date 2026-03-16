@@ -384,3 +384,40 @@ def rotm2rpy(R: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     yaw = np.arctan2(R[1, 0], R[0, 0])
 
     return np.array([roll, pitch, yaw])
+
+
+def convert_batch_to_10d(eef_xyz_wxyz: npt.NDArray[np.float32], gripper_width: npt.NDArray[np.float32]):
+    """
+    eef_xyz_wxyz: (batch_size, obs_history_len, 7)
+    gripper_width: (batch_size, obs_history_len, 1)
+
+    return:
+        robot0_10d: (batch_size, obs_history_len, 10)
+    """
+
+    assert eef_xyz_wxyz.shape[0:2] == gripper_width.shape[0:2]
+
+    batch_size, obs_history_len = eef_xyz_wxyz.shape[0:2]
+
+    pose10d = np.zeros((batch_size, obs_history_len, 10))
+    pose10d[:, :, :3] = eef_xyz_wxyz[:, :, :3]
+    pose10d[:, :, 3:9] = quat_wxyz_to_rot_6d_batch(eef_xyz_wxyz[:, :, 3:])
+    pose10d[:, :, 9] = gripper_width[:, :, 0]
+
+    return pose10d
+
+def convert_10d_to_batch(pose10d: npt.NDArray[np.float32]):
+    """
+    pose10d: (batch_size, obs_history_len, 10)
+
+    return:
+        eef_xyz_wxyz: (batch_size, obs_history_len, 7)
+        gripper_width: (batch_size, obs_history_len, 1)
+    """
+    batch_size, obs_history_len = pose10d.shape[0:2]
+    eef_xyz_wxyz = np.zeros((batch_size, obs_history_len, 7), dtype=np.float32)
+    eef_xyz_wxyz[:, :, :3] = pose10d[:, :, :3]
+    eef_xyz_wxyz[:, :, 3:] = rot_6d_to_quat_wxyz_batch(pose10d[:, :, 3:9])
+    gripper_width = pose10d[:, :, 9:]
+
+    return eef_xyz_wxyz, gripper_width

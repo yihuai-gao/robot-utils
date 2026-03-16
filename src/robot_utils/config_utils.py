@@ -2,12 +2,28 @@ import hydra
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from typing import Any, cast
 
+
 def register_resolvers():
+    def e(x: Any) -> int:
+        if isinstance(x, str):
+            return eval(x)
+        else:
+            return x
+    def concat(*args: list[ListConfig]) -> ListConfig:
+        # Filter out empty lists and start with a fresh ListConfig to avoid aliasing issues
+        result = ListConfig([])
+        for arg in args:
+            if arg is not None and len(arg) > 0:
+                result = ListConfig(list(result) + list(arg))
+        return result
+
     OmegaConf.register_new_resolver("eval", eval)
-    OmegaConf.register_new_resolver("concat", lambda *args: args[0] + args[1])
+    OmegaConf.register_new_resolver("concat", concat)
     OmegaConf.register_new_resolver("cond", lambda cond, true_val, false_val: true_val if cond else false_val)
-    OmegaConf.register_new_resolver("range", lambda start, end, step=1: ListConfig(list(range(start, end, step))))
+    OmegaConf.register_new_resolver("range", lambda start, end, step=1: ListConfig(list(range(e(start), e(end), e(step)))))
     OmegaConf.register_new_resolver("in", lambda target, *items: any(item in target for item in items))
+    OmegaConf.register_new_resolver("shift", lambda list_cfg, shift: ListConfig([element + e(shift) for element in e(list_cfg)]))
+
 
 def disable_hydra_target(cfg: Any) -> Any:
     if isinstance(cfg, DictConfig):

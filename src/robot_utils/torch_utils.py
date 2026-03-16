@@ -139,8 +139,16 @@ def split_batch(
         yield from split_fn(batch)
 
     elif isinstance(batch, dict):
+        non_splitting_batch = {}
+        # Will repeat the keys that are not tensors
+        for k, v in batch.items():
+            if isinstance(v, list) and isinstance(v[0], str):
+                non_splitting_batch[k] = v
+        batch = {k: v for k, v in batch.items() if k not in non_splitting_batch.keys()}
+
         for values in zip(*[split_batch(v, split_fn) for v in batch.values()]):
-            yield {k: v for k, v in zip(batch.keys(), values)}
+            splitted_batch = {k: v for k, v in zip(batch.keys(), values)}
+            yield {**splitted_batch, **non_splitting_batch}
 
     elif isinstance(batch, list):
         for values in zip(*[split_batch(v, split_fn) for v in batch]):
@@ -161,7 +169,6 @@ def to_cpu(obj: Any) -> Any:
         return obj
 
 process_group_initialized = False
-
 world_size = int(os.environ.get("WORLD_SIZE", 1))
 
 def init_process_group():
