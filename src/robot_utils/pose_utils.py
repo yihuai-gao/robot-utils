@@ -21,6 +21,50 @@ def qmult(q1: npt.NDArray[Any], q2: npt.NDArray[Any]) -> npt.NDArray[Any]:
 def qconjugate(q: npt.NDArray[Any]) -> npt.NDArray[Any]:
     return np.array([q[0], -q[1], -q[2], -q[3]])
 
+def qinterp(
+    q1: npt.NDArray[np.float64], q2: npt.NDArray[np.float64], t: float
+) -> npt.NDArray[np.float64]:
+    """Spherical linear interpolation between two quaternions.
+
+    Args:
+        q1: First quaternion (wxyz format)
+        q2: Second quaternion (wxyz format)
+        t: Interpolation parameter (0 to 1); 0: q1, 1: q2
+
+    Returns:
+        Interpolated quaternion (wxyz format)
+    """
+    # Compute the cosine of the angle between the quaternions
+    dot = np.dot(q1, q2)
+
+    # If the dot product is negative, we need to negate one of the quaternions
+    # to ensure we take the shortest path
+    if dot < 0.0:
+        q2 = -q2
+        dot = -dot
+
+    # If the quaternions are very close, use linear interpolation
+    if dot > 0.9995:
+        result = q1 + t * (q2 - q1)
+        return result / np.linalg.norm(result)
+
+    # Calculate the angle between quaternions
+    theta_0 = np.arccos(dot)
+    sin_theta_0 = np.sin(theta_0)
+
+    # Compute interpolation coefficients
+    theta = theta_0 * t
+    sin_theta = np.sin(theta)
+
+    s0 = np.cos(theta) - dot * sin_theta / sin_theta_0
+    s1 = sin_theta / sin_theta_0
+
+    q = (s0 * q1) + (s1 * q2)
+
+    if q[0] < 0:
+        q = -q
+
+    return q
 
 def to_xyzw(wxyz: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     if wxyz.ndim == 1:
@@ -248,11 +292,11 @@ def rot_6d_to_quat_wxyz_batch(rot_6d: npt.NDArray[Any]) -> npt.NDArray[Any]:
 
 def rot_6d_to_mat(d6: npt.NDArray[Any]) -> npt.NDArray[Any]:
     a1, a2 = d6[..., :3], d6[..., 3:]
-    b1: npt.NDArray[Any] = normalize(a1)
-    b2: npt.NDArray[Any] = a2 - np.sum(b1 * a2, axis=-1, keepdims=True) * b1
-    b2: npt.NDArray[Any] = normalize(b2)
-    b3: npt.NDArray[Any] = np.cross(b1, b2, axis=-1)
-    out: npt.NDArray[Any] = np.stack((b1, b2, b3), axis=-2)
+    b1 = normalize(a1)
+    b2 = a2 - np.sum(b1 * a2, axis=-1, keepdims=True) * b1
+    b2 = normalize(b2)
+    b3 = np.cross(b1, b2, axis=-1)
+    out = np.stack((b1, b2, b3), axis=-2)
     return out
 
 

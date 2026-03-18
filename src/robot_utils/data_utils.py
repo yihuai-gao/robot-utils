@@ -5,9 +5,8 @@ from typing import Any, Callable, Union
 from cv2.typing import MatLike
 
 
-
 def aggregate_dict(
-    dictionaries: list[dict[str, Any]] | dict[Any, dict[str, Any]],
+    dictionaries: Union[list[dict[str, Any]], dict[Any, dict[str, Any]]],
     convert_to_numpy: bool,
     key_name: str = "",
 ) -> dict[str, Any]:

@@ -22,6 +22,24 @@ def print_once(data: Any):
         _printed_strs.add(print_str)
         print(print_str)
 
+def print_step_log(step_log: dict[str, Any]) -> None:
+    for key, value in step_log.items():
+        value = float(value)
+        print(f"\t{key}: {value:.5f}")
+
+
+def clear_printed_strs():
+    global _printed_strs
+    _printed_strs = set()
+
+
+def print_all_attrs(obj: Any):
+    for key in dir(obj):
+        val = getattr(obj, key)
+        if hasattr(val, "shape"):
+            print(f"{key}: {val.shape}")
+        else:
+            print(f"{key}: {val}")
 
 def merge_param_names(
     param_names: list[str] | Iterable[str], layers: int, stop_at_numbers: bool
@@ -55,8 +73,3 @@ def merge_param_names(
                 merged_param_names.append(param_prefix)
     return merged_param_names
 
-
-def print_step_log(step_log: dict[str, Any]) -> None:
-    for key, value in step_log.items():
-        value = float(value)
-        print(f"\t{key}: {value:.5f}")
