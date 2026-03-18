@@ -1,7 +1,7 @@
 #! /bin/bash
 
-set -e
 rm -r dist
+set -e
 pip install --upgrade build
 pip install twine
 python -m build
