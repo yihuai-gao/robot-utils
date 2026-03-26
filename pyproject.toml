@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robot-utils"
-version = "0.1.3"
+version = "0.1.4"
 description = "Frequently used utility functions for robot learning research"
 authors = [{ name = "Yihuai Gao", email = "davidgao1013@gmail.com" }]
 dependencies = []
@@ -22,3 +22,10 @@ include = [
 
 [project.urls]
 Homepage = "https://github.com/yihuai-gao/robot-utils"
+
+
+[project.scripts]
+spacemouse_server = "robot_utils.teleop_utils.spacemouse.spacemouse_server:run_spacemouse_server"
+keyboard_server = "robot_utils.teleop_utils.keyboard.keyboard_server:run_keyboard_server"
+mocap_server = "robot_utils.teleop_utils.mocap.mocap_server:run_mocap_server"
+iphone_server = "robot_utils.teleop_utils.iphone.iphone_server:run_iphone_server"
